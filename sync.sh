@@ -2,6 +2,7 @@
 # 近畿POPUP.md の変更を検知して しおり を再生成し、GitHub へ push する。
 # launchd の WatchPaths から呼ばれる（手動実行も可）。
 set -e
+export PATH="/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 REPO="/Users/takuya/projects/kinki-popup-shiori"
 cd "$REPO"
 
