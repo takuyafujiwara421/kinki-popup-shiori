@@ -49,23 +49,24 @@ def parse(md):
             continue
         m = DATE_RE.match(line)
         if m:
-            cur_day = {"date": (int(m.group(1)), int(m.group(2))), "sections": []}
+            cur_day = {"date": (int(m.group(1)), int(m.group(2))), "sections": [], "subtitle": []}
             days.append(cur_day)
             cur_sec = None
             continue
         if line.startswith("・"):
             if cur_day is None:
-                cur_day = {"date": None, "sections": []}
+                cur_day = {"date": None, "sections": [], "subtitle": []}
                 days.append(cur_day)
             cur_sec = {"name": line[1:].strip(), "lines": []}
             cur_day["sections"].append(cur_sec)
             continue
         if cur_day is None:
-            cur_day = {"date": None, "sections": []}
+            cur_day = {"date": None, "sections": [], "subtitle": []}
             days.append(cur_day)
         if cur_sec is None:
-            cur_sec = {"name": "", "lines": []}
-            cur_day["sections"].append(cur_sec)
+            # セクション（・）が始まる前の行＝その日の概要（サブタイトル）
+            cur_day["subtitle"].append(line)
+            continue
         cur_sec["lines"].append(line)
     return days
 
@@ -250,6 +251,39 @@ def render_spot(name, lines, kind):
 # ----------------------------------------------------------------------
 # 1日分をレンダリング
 # ----------------------------------------------------------------------
+def text_card(name, lines):
+    """電車カードにならない自由記述（例：ゆうかの移動プラン）を、そのまま順番どおり出す。"""
+    note = "<br>".join(esc(x) for x in lines)
+    inner = ""
+    if name:
+        inner += f'        <div class="kind">{esc(name)}</div>\n'
+    inner += f'        <p class="note">{note}</p>'
+    return (
+        '    <div class="item">\n'
+        '      <div class="spot">\n'
+        f"{inner}\n"
+        "      </div>\n"
+        "    </div>"
+    )
+
+
+def render_section(sec):
+    """1セクションを描画。書かれた内容は落とさず、順番どおりに出す。"""
+    name = sec["name"]
+    kind = section_kind(name)
+    lines = sec["lines"]
+    if kind == "move":
+        intro, items = render_move(lines)
+        out = []
+        if intro:                       # 【路線名】以外の文章もカードにして残す
+            out.append(text_card(name, intro))
+        out += items
+        return name, out
+    if kind == "popup":
+        return "POPUP", render_popup(lines)
+    return name, [render_spot(name, lines, kind)]
+
+
 def render_day(day, index):
     num = (KANSUJI[index + 1] if index + 1 < len(KANSUJI) else str(index + 1)) + "日目"
     date_str = ""
@@ -257,23 +291,12 @@ def render_day(day, index):
         mm, dd = day["date"]
         date_str = f"{mm} / {dd}"
 
-    place = ""
+    place = "　".join(day.get("subtitle", []))
     blocks_html = []
     for sec in day["sections"]:
-        kind = section_kind(sec["name"])
-        if kind == "move":
-            intro, items = render_move(sec["lines"])
-            if intro and not place:
-                place = "　".join(intro)
-            if items:
-                blocks_html.append(section_block(sec["name"], items))
-        elif kind == "popup":
-            items = render_popup(sec["lines"])
-            if items:
-                blocks_html.append(section_block("POPUP", items))
-        else:
-            item = render_spot(sec["name"], sec["lines"], kind)
-            blocks_html.append(section_block(sec["name"], [item]))
+        title, items = render_section(sec)
+        if items:
+            blocks_html.append(section_block(title, items))
 
     head_meta = f'      <span class="date">{esc(date_str)}</span>'
     if place:
