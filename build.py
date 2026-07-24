@@ -76,7 +76,7 @@ def section_kind(name):
     n = name
     if "移動" in n:
         return "move"
-    if "POPUP" in n.upper() or "ポップアップ" in n:
+    if any(k in n.upper() for k in ("POPUP", "CARAVAN")) or any(k in n for k in ("ポップアップ", "キャラバン")):
         return "popup"
     if "宿" in n:
         return "stay"
@@ -276,7 +276,7 @@ def render_section(sec):
         out += items
         return name, out
     if kind == "popup":
-        return "POPUP", render_popup(lines)
+        return name, render_popup(lines)
     return name, [render_spot(name, lines, kind)]
 
 
