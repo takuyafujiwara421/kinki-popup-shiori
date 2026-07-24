@@ -4,9 +4,12 @@
 set -e
 export PATH="/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 REPO="/Users/takuya/projects/kinki-popup-shiori"
+MD="/Users/takuya/Library/Mobile Documents/iCloud~md~obsidian/Documents/藤原拓矢/近畿POPUP.md"
 cd "$REPO"
 
-/usr/bin/python3 build.py >> sync.log 2>&1
+# md はシェル（zsh）がリダイレクトで開いて python に標準入力で渡す。
+# こうすると TCC の対象が zsh だけになり、フルディスクアクセスは /bin/zsh 一つで済む。
+/usr/bin/python3 build.py - < "$MD" >> sync.log 2>&1
 
 if [ -n "$(git status --porcelain index.html)" ]; then
   git add index.html

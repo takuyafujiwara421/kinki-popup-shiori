@@ -523,8 +523,13 @@ def build_page(days):
 
 
 def main():
-    with open(MD_PATH, encoding="utf-8") as f:
-        md = f.read()
+    import sys
+    # 引数 '-' で標準入力から md を読む（launchd等がファイルを開いて渡す用）。
+    if len(sys.argv) > 1 and sys.argv[1] == "-":
+        md = sys.stdin.read()
+    else:
+        with open(MD_PATH, encoding="utf-8") as f:
+            md = f.read()
     days = parse(md)
     page = build_page(days)
     with open(OUT_PATH, "w", encoding="utf-8") as f:
