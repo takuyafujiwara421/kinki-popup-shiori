@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 近畿POPUP.md を読み込み、旅のしおり index.html を生成する。
+デザインは「47 CARAVAN 原点回帰」風の 黒 × ゴールド。
 md のフォーマット（・セクション / 【路線名】/ 時刻 / URL）をパースして
-既存デザインのコンポーネント（時刻表カード・POPUPバナー・スポット）に流し込む。
+コンポーネント（時刻表カード・POPUPバナー・スポット・自由記述）に流し込む。
 """
 import re
 import os
@@ -80,7 +81,7 @@ def section_kind(name):
     if "宿" in n:
         return "stay"
     if any(k in n for k in ["デザート", "朝食", "昼食", "夜飯", "ディナー", "ランチ",
-                            "カフェ", "ごはん", "ご飯", "飯", "ランチ", "食"]):
+                            "カフェ", "ごはん", "ご飯", "飯", "食"]):
         return "eat"
     return "spot"
 
@@ -176,7 +177,7 @@ def render_popup(lines):
             '    <div class="item event">\n'
             '      <div class="popup">\n'
             '        <span class="badge">POP UP</span>\n'
-            f'        <span><span class="pt">{esc(t)}</span> &nbsp;/&nbsp; '
+            f'        <span class="pinfo"><span class="pt">{esc(t)}</span>'
             f'<span class="pp">{esc(place)}</span></span>\n'
             "      </div>\n"
             "    </div>"
@@ -202,10 +203,8 @@ def render_spot(name, lines, kind):
         texts.append(ln)
 
     spot_cls = "spot"
-    btn_cls = "btn"
     if kind == "eat":
         spot_cls += " eat"
-        btn_cls += " eat"
     elif kind == "stay":
         spot_cls += " stay"
 
@@ -231,11 +230,11 @@ def render_spot(name, lines, kind):
     if note:
         inner.append(f'        <p class="note">{esc(note)}</p>')
     if url:
-        label = "地図をひらく ↗"
+        label = "MAP ↗"
         if kind == "stay":
             label = "宿を見る ↗"
         inner.append(
-            f'        <a class="{btn_cls}" href="{esc(url)}" target="_blank" '
+            f'        <a class="btn" href="{esc(url)}" target="_blank" '
             f'rel="noopener">{label}</a>'
         )
     inner_html = "\n".join(inner)
@@ -248,9 +247,6 @@ def render_spot(name, lines, kind):
     )
 
 
-# ----------------------------------------------------------------------
-# 1日分をレンダリング
-# ----------------------------------------------------------------------
 def text_card(name, lines):
     """電車カードにならない自由記述（例：ゆうかの移動プラン）を、そのまま順番どおり出す。"""
     note = "<br>".join(esc(x) for x in lines)
@@ -316,7 +312,7 @@ def render_day(day, index):
 def section_block(title, items):
     items_html = "\n".join(items)
     return (
-        f'  <p class="sub">▶ {esc(title)}</p>\n'
+        f'  <p class="sub"><span>{esc(title)}</span></p>\n'
         '  <div class="tl">\n'
         f"{items_html}\n"
         "  </div>"
@@ -324,171 +320,251 @@ def section_block(title, items):
 
 
 # ----------------------------------------------------------------------
-# ページ全体
+# ページ全体（黒 × ゴールド）
 # ----------------------------------------------------------------------
 STYLE = r"""<style>
   :root {
-    --paper: #f4efe2; --paper-2: #ece5d3; --ink: #26332e; --ink-soft: #5a675f;
-    --rail: #16594a; --rail-deep: #0f3d33; --stamp: #c0392b; --gold: #b0872f;
-    --line: #c9bfa4; --card: #fbf8ef; --shadow: rgba(40,50,40,.14); --dot: #16594a;
+    --bg: #0a0a0c;
+    --panel: #141216;
+    --panel-2: #1a171e;
+    --gold: #d7b45a;
+    --gold-b: #f3e0a0;
+    --gold-d: #9c7a30;
+    --ink: #f3eee2;
+    --ink-soft: #b7ad94;
+    --ink-dim: #877d66;
+    --line: rgba(215,180,90,.28);
+    --line-strong: rgba(215,180,90,.55);
     --serif: "Hiragino Mincho ProN", "游明朝", "Yu Mincho", serif;
     --gothic: "Hiragino Sans", "游ゴシック体", "Yu Gothic", system-ui, sans-serif;
     --mono: "SF Mono", "Menlo", "Courier New", monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --paper: #1c211d; --paper-2: #161a17; --ink: #ece5d3; --ink-soft: #a9b3a8;
-      --rail: #6fc4ae; --rail-deep: #9dd8c7; --stamp: #e5766a; --gold: #d4ac5e;
-      --line: #3a453c; --card: #232a25; --shadow: rgba(0,0,0,.4); --dot: #6fc4ae;
-    }
-  }
-  :root[data-theme="light"] {
-    --paper: #f4efe2; --paper-2: #ece5d3; --ink: #26332e; --ink-soft: #5a675f;
-    --rail: #16594a; --rail-deep: #0f3d33; --stamp: #c0392b; --gold: #b0872f;
-    --line: #c9bfa4; --card: #fbf8ef; --shadow: rgba(40,50,40,.14); --dot: #16594a;
-  }
-  :root[data-theme="dark"] {
-    --paper: #1c211d; --paper-2: #161a17; --ink: #ece5d3; --ink-soft: #a9b3a8;
-    --rail: #6fc4ae; --rail-deep: #9dd8c7; --stamp: #e5766a; --gold: #d4ac5e;
-    --line: #3a453c; --card: #232a25; --shadow: rgba(0,0,0,.4); --dot: #6fc4ae;
+    --gold-grad: linear-gradient(172deg, #f7e7ad 0%, #e3c56e 42%, #b9902f 100%);
   }
 
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
     background:
-      radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--rail) 6%, transparent), transparent 60%),
-      var(--paper);
+      radial-gradient(1100px 460px at 50% -6%, rgba(215,180,90,.13), transparent 62%),
+      radial-gradient(760px 620px at 108% 102%, rgba(215,180,90,.06), transparent 70%),
+      radial-gradient(680px 560px at -8% 90%, rgba(215,180,90,.05), transparent 70%),
+      var(--bg);
     color: var(--ink);
     font-family: var(--gothic);
     line-height: 1.75;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px 80px; }
+  /* ポスター外枠 */
+  body::before {
+    content: "";
+    position: fixed; inset: 7px;
+    border: 1px solid var(--line);
+    pointer-events: none; z-index: 50;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px 88px; }
 
+  .gold { background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* ===== 表紙 ===== */
   .cover {
     position: relative;
-    margin: 0 -20px 12px;
-    padding: 64px 28px 52px;
-    background:
-      repeating-linear-gradient(90deg, transparent 0 22px, color-mix(in srgb, var(--rail) 8%, transparent) 22px 24px),
-      linear-gradient(160deg, var(--rail-deep), var(--rail));
-    color: #f4efe2;
+    margin: 22px 0 12px;
+    padding: 54px 26px 46px;
+    background: linear-gradient(158deg, #17141a 0%, #0c0b0e 72%);
+    border: 1px solid var(--line-strong);
     text-align: center;
     overflow: hidden;
   }
-  .cover::before, .cover::after {
+  .cover::before {
     content: "";
-    position: absolute; left: 0; right: 0; height: 16px;
-    background: radial-gradient(circle at 8px 0, var(--paper) 7px, transparent 8px) repeat-x;
-    background-size: 16px 16px;
+    position: absolute; inset: 9px;
+    border: 1px solid var(--line);
+    pointer-events: none;
   }
-  .cover::before { top: -8px; }
-  .cover::after { bottom: -8px; transform: rotate(180deg); }
+  .cover::after {
+    content: "";
+    position: absolute; left: 0; right: 0; top: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: .8;
+  }
   .cover .eyebrow {
-    font-family: var(--mono); letter-spacing: .5em; font-size: 12px;
-    opacity: .85; margin: 0 0 18px; padding-left: .5em;
+    position: relative;
+    font-family: var(--mono); letter-spacing: .42em; font-size: 11px;
+    color: var(--gold); opacity: .92; margin: 0 0 20px; padding-left: .42em;
   }
   .cover h1 {
-    font-family: var(--serif); font-weight: 600;
-    font-size: clamp(34px, 8vw, 56px); letter-spacing: .06em;
-    margin: 0; text-wrap: balance; line-height: 1.3;
+    position: relative;
+    font-family: var(--serif); font-weight: 700;
+    font-size: clamp(38px, 9vw, 62px); letter-spacing: .04em;
+    margin: 0; line-height: 1.28; text-wrap: balance;
+    background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 1px 26px rgba(215,180,90,.22);
   }
-  .cover .route { margin: 22px auto 0; font-size: 14px; letter-spacing: .18em; opacity: .92; max-width: 460px; }
+  .cover .rule {
+    position: relative;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    margin: 20px auto 18px; max-width: 320px; color: var(--gold);
+  }
+  .cover .rule::before, .cover .rule::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  }
+  .cover .rule span { font-size: 11px; letter-spacing: .2em; }
+  .cover .route {
+    position: relative;
+    margin: 0 auto; font-family: var(--serif); font-size: 15px;
+    letter-spacing: .16em; color: var(--ink); max-width: 480px;
+  }
   .cover .dates {
-    display: inline-block; margin-top: 26px; padding: 7px 20px;
-    border: 1px solid rgba(244,239,226,.5); border-radius: 2px;
-    font-family: var(--mono); letter-spacing: .28em; font-size: 13px;
+    position: relative;
+    display: inline-block; margin-top: 24px; padding: 7px 22px;
+    border: 1px solid var(--line-strong); border-radius: 1px;
+    font-family: var(--mono); letter-spacing: .26em; font-size: 12.5px;
+    color: var(--gold-b);
   }
-  .stamp {
-    position: absolute; top: 40px; right: 26px; width: 84px; height: 84px;
-    border: 2.5px solid var(--stamp); border-radius: 50%; color: var(--stamp);
-    display: grid; place-content: center; text-align: center;
-    font-family: var(--serif); font-size: 12px; line-height: 1.4; letter-spacing: .12em;
-    transform: rotate(-11deg); opacity: .92; background: rgba(244,239,226,.06);
-  }
-  .stamp b { display: block; font-size: 19px; letter-spacing: 0; }
 
   .lead {
-    text-align: center; color: var(--ink-soft); font-size: 14.5px;
-    margin: 26px auto 40px; max-width: 540px; line-height: 1.9;
+    text-align: center; color: var(--ink-soft); font-size: 14px;
+    margin: 26px auto 34px; max-width: 540px; line-height: 1.95;
+    font-family: var(--serif);
   }
 
+  /* ===== 日ラベル ===== */
   .day {
     display: flex; align-items: baseline; gap: 16px;
-    margin: 52px 0 8px; padding-bottom: 12px; border-bottom: 2px solid var(--ink);
+    margin: 56px 0 8px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--line-strong);
   }
   .day .num {
-    font-family: var(--serif); font-size: clamp(28px, 6.5vw, 44px); font-weight: 600;
-    color: var(--rail); letter-spacing: .02em; line-height: 1; white-space: nowrap; flex-shrink: 0;
+    font-family: var(--serif); font-size: clamp(30px, 7vw, 46px); font-weight: 700;
+    letter-spacing: .04em; line-height: 1; white-space: nowrap; flex-shrink: 0;
+    background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 1px 20px rgba(215,180,90,.18);
   }
-  .day .meta { display: flex; flex-direction: column; min-width: 0; }
-  .day .date { font-family: var(--mono); font-size: 13px; letter-spacing: .2em; color: var(--ink-soft); }
-  .day .place { font-size: 15px; letter-spacing: .12em; font-weight: 600; }
+  .day .meta { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+  .day .date { font-family: var(--mono); font-size: 12.5px; letter-spacing: .2em; color: var(--gold); }
+  .day .place { font-size: 14px; letter-spacing: .1em; font-weight: 600; color: var(--ink); }
 
-  .tl { position: relative; margin: 26px 0 0; padding-left: 26px; }
-  .tl::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
-  .item { position: relative; margin-bottom: 20px; }
+  /* ===== セクション見出し（──◆ 見出し ◆──）===== */
+  .sub {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    margin: 40px 0 8px;
+  }
+  .sub::before, .sub::after {
+    content: ""; flex: 1; height: 1px; max-width: 160px;
+    background: linear-gradient(90deg, transparent, var(--line-strong));
+  }
+  .sub::after { background: linear-gradient(90deg, var(--line-strong), transparent); }
+  .sub span {
+    font-family: var(--serif); font-size: 14px; letter-spacing: .22em;
+    color: var(--gold-b); white-space: nowrap;
+  }
+  .sub span::before { content: "◆"; color: var(--gold); font-size: 8px; vertical-align: 3px; margin-right: 12px; }
+  .sub span::after  { content: "◆"; color: var(--gold); font-size: 8px; vertical-align: 3px; margin-left: 12px; }
+
+  /* ===== タイムライン ===== */
+  .tl { position: relative; margin: 22px 0 0; padding-left: 26px; }
+  .tl::before {
+    content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px;
+    width: 1px; background: linear-gradient(var(--line-strong), var(--line));
+  }
+  .item { position: relative; margin-bottom: 18px; }
   .item::before {
-    content: ""; position: absolute; left: -25px; top: 6px;
-    width: 12px; height: 12px; border-radius: 50%;
-    background: var(--paper); border: 2.5px solid var(--dot);
+    content: ""; position: absolute; left: -25px; top: 7px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--bg); border: 1.5px solid var(--gold-d);
+    box-shadow: 0 0 0 3px rgba(215,180,90,.08);
   }
-  .item.event::before { background: var(--stamp); border-color: var(--stamp); }
-  .item .time { font-family: var(--mono); font-size: 12.5px; letter-spacing: .1em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-  .item .head { font-size: 16px; font-weight: 600; letter-spacing: .04em; margin: 1px 0 2px; }
+  .item.event::before {
+    background: radial-gradient(circle, var(--gold-b), var(--gold));
+    border-color: var(--gold-b);
+    box-shadow: 0 0 10px rgba(215,180,90,.55);
+  }
 
-  .move { background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; box-shadow: 0 1px 0 var(--shadow); }
+  /* 移動カード（時刻表） */
+  .move {
+    background: linear-gradient(160deg, var(--panel), #0f0d11);
+    border: 1px solid var(--line); border-radius: 3px;
+    padding: 13px 15px;
+  }
   .move .lineName {
-    display: inline-block; font-size: 11px; letter-spacing: .14em; font-weight: 700;
-    color: var(--rail); background: color-mix(in srgb, var(--rail) 12%, transparent);
-    padding: 2px 9px; border-radius: 999px; margin-bottom: 9px;
+    display: inline-block; font-size: 11px; letter-spacing: .16em; font-weight: 700;
+    color: var(--gold-b); border: 1px solid var(--line-strong);
+    padding: 2px 10px; border-radius: 999px; margin-bottom: 10px;
   }
-  .leg { display: grid; grid-template-columns: 62px 1fr; gap: 4px 12px; font-variant-numeric: tabular-nums; align-items: center; padding: 3px 0; }
+  .leg {
+    display: grid; grid-template-columns: 62px 1fr; gap: 4px 12px;
+    font-variant-numeric: tabular-nums; align-items: center; padding: 4px 0;
+  }
   .leg + .leg { border-top: 1px dashed var(--line); }
-  .leg .t { font-family: var(--mono); font-size: 14px; letter-spacing: .04em; color: var(--ink); }
-  .leg .s { font-size: 14px; letter-spacing: .04em; }
-  .leg .s small { color: var(--ink-soft); font-size: 12px; letter-spacing: .06em; }
+  .leg .t { font-family: var(--mono); font-size: 14px; letter-spacing: .04em; color: var(--gold); }
+  .leg .s { font-size: 14px; letter-spacing: .05em; color: var(--ink); }
+  .leg .s small { color: var(--ink-dim); font-size: 11.5px; letter-spacing: .06em; margin-left: 2px; }
 
-  .spot { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 4px; padding: 12px 14px; }
-  .spot.eat { border-left-color: var(--stamp); }
-  .spot.stay { border-left-color: var(--rail); }
-  .spot .kind { font-size: 11px; letter-spacing: .18em; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; }
-  .spot .name { font-size: 15.5px; font-weight: 600; margin: 2px 0 6px; letter-spacing: .03em; }
-  .spot .note { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; }
+  /* スポット / 候補 / 自由記述 */
+  .spot {
+    position: relative;
+    background: linear-gradient(160deg, var(--panel), #0f0d11);
+    border: 1px solid var(--line); border-left: 2px solid var(--gold);
+    border-radius: 3px; padding: 12px 15px;
+  }
+  .spot.eat  { border-left-color: var(--gold-b); }
+  .spot.stay { border-left-color: var(--gold-d); }
+  .spot .kind { font-size: 10.5px; letter-spacing: .2em; font-weight: 700; color: var(--gold); text-transform: uppercase; }
+  .spot .name { font-family: var(--serif); font-size: 16px; font-weight: 600; margin: 3px 0 6px; letter-spacing: .03em; color: var(--ink); }
+  .spot .note { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; line-height: 1.85; }
 
   a.btn {
-    display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; letter-spacing: .06em;
-    text-decoration: none; color: var(--rail); font-weight: 600;
-    border: 1px solid color-mix(in srgb, var(--rail) 40%, transparent);
-    border-radius: 999px; padding: 4px 12px; transition: background .15s, color .15s;
+    display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono);
+    font-size: 11.5px; letter-spacing: .12em; text-decoration: none;
+    color: var(--gold-b); font-weight: 600;
+    border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 14px;
+    transition: background .18s, color .18s, border-color .18s;
   }
-  a.btn:hover { background: var(--rail); color: var(--paper); }
-  a.btn.eat { color: var(--stamp); border-color: color-mix(in srgb, var(--stamp) 45%, transparent); }
-  a.btn.eat:hover { background: var(--stamp); color: #fff; }
-  a.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  a.btn:hover { background: var(--gold); color: #17130a; border-color: var(--gold); }
+  a.btn:focus-visible { outline: 2px solid var(--gold-b); outline-offset: 2px; }
 
-  .tbd { font-size: 12px; letter-spacing: .1em; color: var(--ink-soft); border: 1px dashed var(--line); border-radius: 4px; padding: 8px 12px; background: transparent; }
+  .tbd {
+    font-size: 12px; letter-spacing: .08em; color: var(--ink-dim);
+    border: 1px dashed var(--line); border-radius: 3px;
+    padding: 9px 13px; background: rgba(255,255,255,.012);
+  }
 
-  .popup { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; background: var(--card); border: 1.5px solid var(--stamp); border-radius: 4px; padding: 11px 15px; }
-  .popup .badge { font-family: var(--serif); font-weight: 700; font-size: 13px; color: #fff; background: var(--stamp); padding: 3px 10px; border-radius: 3px; letter-spacing: .08em; white-space: nowrap; }
-  .popup .pt { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; }
-  .popup .pp { font-weight: 600; letter-spacing: .06em; }
+  /* POPUPバナー */
+  .popup {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px;
+    background: linear-gradient(160deg, #1c1710, #0e0b07);
+    border: 1px solid var(--gold-d); border-radius: 3px; padding: 12px 16px;
+    box-shadow: inset 0 0 22px rgba(215,180,90,.06);
+  }
+  .popup .badge {
+    font-family: var(--serif); font-weight: 700; font-size: 12px;
+    color: #17130a; background: var(--gold-grad);
+    padding: 4px 12px; border-radius: 2px; letter-spacing: .14em; white-space: nowrap;
+  }
+  .popup .pinfo { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; }
+  .popup .pt { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--gold-b); }
+  .popup .pp { font-family: var(--serif); font-weight: 600; letter-spacing: .08em; color: var(--ink); }
 
-  .foot { margin-top: 60px; padding-top: 22px; border-top: 2px solid var(--ink); text-align: center; }
-  .foot p { font-family: var(--serif); font-size: 15px; letter-spacing: .1em; color: var(--ink); margin: 0 0 6px; }
-  .foot small { color: var(--ink-soft); font-size: 12px; letter-spacing: .12em; }
-
-  .sub { font-size: 13px; letter-spacing: .16em; color: var(--ink-soft); margin: 34px 0 4px; font-weight: 700; }
+  /* しめ */
+  .foot {
+    margin-top: 62px; padding-top: 26px; text-align: center;
+    border-top: 1px solid var(--line-strong);
+  }
+  .foot p { font-family: var(--serif); font-size: 15px; letter-spacing: .12em; margin: 0 0 8px;
+            background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .foot small { color: var(--ink-dim); font-size: 11.5px; letter-spacing: .14em; font-family: var(--mono); }
 
   @media (max-width: 380px) {
-    .cover { padding: 56px 20px 46px; }
-    .cover .eyebrow { letter-spacing: .32em; font-size: 11px; }
-    .cover .dates { letter-spacing: .16em; font-size: 12px; padding: 7px 14px; }
-    .cover .route { letter-spacing: .1em; }
-    .stamp { top: 26px; right: 16px; width: 70px; height: 70px; }
+    .wrap { padding: 0 16px 70px; }
+    .cover { padding: 46px 18px 40px; }
+    .cover .eyebrow { letter-spacing: .28em; font-size: 10px; }
+    .cover .dates { letter-spacing: .14em; font-size: 11.5px; padding: 7px 15px; }
     .day { gap: 12px; }
-    .day .num { font-size: 30px; }
+    .day .num { font-size: 32px; }
+    .sub::before, .sub::after { max-width: 60px; }
+    .sub span { font-size: 13px; letter-spacing: .16em; }
     .leg { grid-template-columns: 56px 1fr; column-gap: 10px; }
   }
 </style>"""
@@ -497,7 +573,6 @@ STYLE = r"""<style>
 def build_page(days):
     body_days = "\n\n".join(render_day(d, i) for i, d in enumerate(days))
 
-    # 日付レンジ
     date_pairs = [d["date"] for d in days if d["date"]]
     if date_pairs:
         (m1, d1) = date_pairs[0]
@@ -513,6 +588,7 @@ def build_page(days):
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0a0c">
 <title>西へ、途中下車。｜{esc(title_dates)}</title>
 {STYLE}
 </head>
@@ -520,9 +596,9 @@ def build_page(days):
 <div class="wrap">
 
   <header class="cover">
-    <div class="stamp"><span>途中下車<b>OK</b>各駅の旅</span></div>
-    <p class="eyebrow">TWO DAYS, WESTBOUND</p>
+    <p class="eyebrow">TWO DAYS · WESTBOUND CARAVAN</p>
     <h1>西へ、<br>途中下車。</h1>
+    <div class="rule"><span>原点回帰</span></div>
     <p class="route">{esc(ROUTE)}</p>
     <div class="dates">{esc(dates)}</div>
   </header>
@@ -536,7 +612,7 @@ def build_page(days):
 
   <div class="foot">
     <p>いってらっしゃい。よい旅を。</p>
-    <small>PLAN A ─ 予定は変わってもいい。ふたりのペースで。</small>
+    <small>PLAN A — 予定は変わってもいい。ふたりのペースで。</small>
   </div>
 
 </div>
