@@ -229,6 +229,19 @@
   .popup .pinfo { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; }
   .popup .pt { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--gold-b); }
   .popup .pp { font-family: var(--serif); font-weight: 600; letter-spacing: .08em; color: var(--ink); }
+  /* 会場名は見出しの下に小さく置く（長くても行が割れて見えないように） */
+  .popup .pvenue {
+    flex-basis: 100%; font-family: var(--serif); font-size: 13px; line-height: 1.7;
+    letter-spacing: .04em; color: var(--gold-b); opacity: .92;
+    padding-left: 2px; word-break: normal; overflow-wrap: anywhere;
+  }
+  @media (max-width: 480px) {
+    .popup { gap: 8px 10px; padding: 12px 13px; }
+    .popup .badge { font-size: 11px; padding: 3px 10px; }
+    .popup .pinfo { gap: 2px 10px; }
+    .popup .pp { font-size: 15px; line-height: 1.6; }
+    .popup .pvenue { font-size: 12.5px; }
+  }
 
   /* しめ */
   .foot {
@@ -352,7 +365,8 @@
     <div class="item event">
       <div class="popup">
         <span class="badge">POP UP</span>
-        <span class="pinfo"><span class="pt">11:00 – 14:00</span><span class="pp">滋賀（古民家カフェツナグ 1F-穴太駅）</span></span>
+        <span class="pinfo"><span class="pt">11:00 – 14:00</span><span class="pp">滋賀 · 穴太駅</span></span>
+        <span class="pvenue">古民家カフェツナグ 1F</span>
       </div>
     </div>
     <div class="item">
@@ -423,7 +437,8 @@
     <div class="item event">
       <div class="popup">
         <span class="badge">POP UP</span>
-        <span class="pinfo"><span class="pt">18:00 – 21:00</span><span class="pp">三重（ニューヨッカイチビル2F-近鉄四日市駅）</span></span>
+        <span class="pinfo"><span class="pt">18:00 – 21:00</span><span class="pp">三重 · 近鉄四日市駅</span></span>
+        <span class="pvenue">ニューヨッカイチビル2F</span>
       </div>
     </div>
     <div class="item">
@@ -506,7 +521,8 @@
     <div class="item event">
       <div class="popup">
         <span class="badge">POP UP</span>
-        <span class="pinfo"><span class="pt">11:00 – 14:00</span><span class="pp">奈良（SiRo三条2F 東中-近鉄奈良駅）</span></span>
+        <span class="pinfo"><span class="pt">11:00 – 14:00</span><span class="pp">奈良 · 近鉄奈良駅</span></span>
+        <span class="pvenue">SiRo三条2F 東中</span>
       </div>
     </div>
     <div class="item">

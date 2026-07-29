@@ -166,15 +166,43 @@ def leg_html(t, station, suffix):
 # ----------------------------------------------------------------------
 # レンダリング：POPUP バナー
 # ----------------------------------------------------------------------
+PLACE_RE = re.compile(r"^(.*?)[（(](.*?)[）)]\s*$")
+
+
+def split_place(place):
+    """「滋賀（古民家カフェツナグ 1F-穴太駅）」を
+    見出し『滋賀 · 穴太駅』と会場名『古民家カフェツナグ 1F』に分ける。
+    スマホで1行に収まらず折り返して不格好になるのを避けるため。"""
+    m = PLACE_RE.match(place)
+    if not m:
+        return place, ""
+    area = m.group(1).strip()
+    inner = m.group(2).strip()
+    # 最後の区切り以降を最寄駅とみなす（会場名にハイフンが入っていてもよい）
+    parts = re.split(r"[-－−‐–—]", inner)   # 長音「ー」は区切りにしない（ニューヨッカイチビル等が壊れる）
+    if len(parts) >= 2 and parts[-1].strip():
+        venue = "-".join(p.strip() for p in parts[:-1]).strip()
+        station = parts[-1].strip()
+    else:
+        venue, station = "", inner
+    head = f"{area} · {station}" if area and station else (area or station)
+    return head, venue
+
+
 def _popup_banner(m):
     t = f"{int(m.group(1)):02d}:00 – {int(m.group(2)):02d}:00"
-    place = m.group(3).strip()
+    head, venue = split_place(m.group(3).strip())
+    inner = (
+        f'        <span class="pinfo"><span class="pt">{esc(t)}</span>'
+        f'<span class="pp">{esc(head)}</span></span>\n'
+    )
+    if venue:
+        inner += f'        <span class="pvenue">{esc(venue)}</span>\n'
     return (
         '    <div class="item event">\n'
         '      <div class="popup">\n'
         '        <span class="badge">POP UP</span>\n'
-        f'        <span class="pinfo"><span class="pt">{esc(t)}</span>'
-        f'<span class="pp">{esc(place)}</span></span>\n'
+        f"{inner}"
         "      </div>\n"
         "    </div>"
     )
@@ -611,6 +639,19 @@ STYLE = r"""<style>
   .popup .pinfo { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; }
   .popup .pt { font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: var(--gold-b); }
   .popup .pp { font-family: var(--serif); font-weight: 600; letter-spacing: .08em; color: var(--ink); }
+  /* 会場名は見出しの下に小さく置く（長くても行が割れて見えないように） */
+  .popup .pvenue {
+    flex-basis: 100%; font-family: var(--serif); font-size: 13px; line-height: 1.7;
+    letter-spacing: .04em; color: var(--gold-b); opacity: .92;
+    padding-left: 2px; word-break: normal; overflow-wrap: anywhere;
+  }
+  @media (max-width: 480px) {
+    .popup { gap: 8px 10px; padding: 12px 13px; }
+    .popup .badge { font-size: 11px; padding: 3px 10px; }
+    .popup .pinfo { gap: 2px 10px; }
+    .popup .pp { font-size: 15px; line-height: 1.6; }
+    .popup .pvenue { font-size: 12.5px; }
+  }
 
   /* しめ */
   .foot {
