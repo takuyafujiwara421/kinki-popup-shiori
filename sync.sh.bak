@@ -4,19 +4,7 @@
 set -e
 export PATH="/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 REPO="/Users/takuya/projects/kinki-popup-shiori"
-VAULT="/Users/takuya/Library/Mobile Documents/iCloud~md~obsidian/Documents/藤原拓矢"
-MD="$VAULT/個人/近畿POPUP.md"
-# Vault内でノートを移動しても動くよう、見つからなければ探しに行く
-if [ ! -f "$MD" ]; then
-  FOUND=$(/usr/bin/find "$VAULT" -name "近畿POPUP.md" -type f -print -quit 2>/dev/null)
-  if [ -n "$FOUND" ]; then
-    MD="$FOUND"
-    echo "$(date '+%F %T') md moved -> $MD" >> sync.log
-  else
-    echo "$(date '+%F %T') ERROR: 近畿POPUP.md が見つかりません" >> sync.log
-    exit 1
-  fi
-fi
+MD="/Users/takuya/Library/Mobile Documents/iCloud~md~obsidian/Documents/藤原拓矢/近畿POPUP.md"
 cd "$REPO"
 
 # md はシェル（zsh）がリダイレクトで開いて python に標準入力で渡す。

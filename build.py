@@ -26,6 +26,7 @@ ROUTE = "石川 → 滋賀 → 三重 → 奈良 →〈翌〉大阪"
 KANSUJI = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"]
 
 URL_RE = re.compile(r"https?://\S+")
+MDLINK_RE = re.compile(r"\[([^\]]*)\]\((https?://[^)\s]+)\)")   # [表示](URL) 記法
 DATE_RE = re.compile(r"^\s*(\d{1,2})/(\d{1,2})\s*$")
 TIME_RANGE_RE = re.compile(r"(\d{1,2}:\d{2})\s*[-–~〜]\s*(\d{1,2}:\d{2})")
 TIME_HEAD_RE = re.compile(r"^(\d{1,2}:\d{2})")
@@ -165,23 +166,43 @@ def leg_html(t, station, suffix):
 # ----------------------------------------------------------------------
 # レンダリング：POPUP バナー
 # ----------------------------------------------------------------------
+def _popup_banner(m):
+    t = f"{int(m.group(1)):02d}:00 – {int(m.group(2)):02d}:00"
+    place = m.group(3).strip()
+    return (
+        '    <div class="item event">\n'
+        '      <div class="popup">\n'
+        '        <span class="badge">POP UP</span>\n'
+        f'        <span class="pinfo"><span class="pt">{esc(t)}</span>'
+        f'<span class="pp">{esc(place)}</span></span>\n'
+        "      </div>\n"
+        "    </div>"
+    )
+
+
 def render_popup(lines):
+    """POPUPの時間帯バナーに加え、会場名・住所・アクセス・MAPも出す。
+    （以前はバナー行以外を捨てていたので、mdに書いた会場情報がサイトに出なかった）"""
     items = []
+    pending = []          # バナー直後に続く会場情報
+
+    def flush():
+        if not pending:
+            return
+        intro, trains = render_move(list(pending))   # 【路線名】があれば時刻表カードに
+        if intro:
+            items.append(text_card("", intro))
+        items.extend(trains)
+        pending.clear()
+
     for ln in lines:
         m = POPUP_RE.search(ln)
-        if not m:
+        if m:
+            flush()
+            items.append(_popup_banner(m))
             continue
-        t = f"{int(m.group(1)):02d}:00 – {int(m.group(2)):02d}:00"
-        place = m.group(3).strip()
-        items.append(
-            '    <div class="item event">\n'
-            '      <div class="popup">\n'
-            '        <span class="badge">POP UP</span>\n'
-            f'        <span class="pinfo"><span class="pt">{esc(t)}</span>'
-            f'<span class="pp">{esc(place)}</span></span>\n'
-            "      </div>\n"
-            "    </div>"
-        )
+        pending.append(ln)
+    flush()
     return items
 
 
@@ -193,9 +214,13 @@ def render_spot(name, lines, kind):
     time = ""
     texts = []
     for ln in lines:
+        m = MDLINK_RE.search(ln)          # [表示](URL) 記法にも対応
+        if m:
+            url = m.group(2)
+            continue
         u = URL_RE.search(ln)
         if u:
-            url = u.group(0)
+            url = u.group(0).rstrip("）)。、,")
             continue
         if TIMEBADGE_RE.match(ln):
             time = ln
@@ -248,16 +273,48 @@ def render_spot(name, lines, kind):
 
 
 def text_card(name, lines):
-    """電車カードにならない自由記述（例：ゆうかの移動プラン）を、そのまま順番どおり出す。"""
-    note = "<br>".join(esc(x) for x in lines)
+    """電車カードにならない自由記述（例：ゆうかの移動プラン）を、そのまま順番どおり出す。
+    URL は文中に長いまま出さず、下の MAP ボタンにまとめる。"""
+    body = []
+    urls = []
+    for ln in lines:
+        # [表示テキスト](URL) の記法 → URLを拾って本文からは消す
+        for m in MDLINK_RE.finditer(ln):
+            urls.append(m.group(2))
+        ln = MDLINK_RE.sub("", ln)
+        # 生のURL → 同じく拾って本文からは消す
+        for m in URL_RE.finditer(ln):
+            urls.append(m.group(0))
+        ln = URL_RE.sub("", ln)
+        # 「乗車地地図URL：」のような、URLを消したら用済みになるラベル行は捨てる
+        ln = re.sub(r"[：:]\s*$", "", ln.strip())
+        if len(ln) <= 12 and re.search(r"(URL|url|リンク)$", ln):
+            ln = ""
+        if ln:
+            body.append(ln)
+
+    seen, links = set(), []
+    for u in urls:
+        u = u.rstrip("）)。、,")
+        if u not in seen:
+            seen.add(u)
+            links.append(u)
+
     inner = ""
     if name:
         inner += f'        <div class="kind">{esc(name)}</div>\n'
-    inner += f'        <p class="note">{note}</p>'
+    if body:
+        inner += '        <p class="note">%s</p>\n' % "<br>".join(esc(x) for x in body)
+    for u in links:
+        label = "MAP ↗" if "maps" in u or "map" in u else "リンク ↗"
+        inner += (
+            f'        <a class="btn" href="{esc(u)}" target="_blank" '
+            f'rel="noopener">{label}</a>\n'
+        )
     return (
         '    <div class="item">\n'
         '      <div class="spot">\n'
-        f"{inner}\n"
+        f"{inner.rstrip()}\n"
         "      </div>\n"
         "    </div>"
     )
@@ -277,6 +334,14 @@ def render_section(sec):
         return name, out
     if kind == "popup":
         return name, render_popup(lines)
+    # スポット系でも【路線名】が混ざっていたら、時刻表カードとして切り出す
+    intro, trains = render_move(lines)
+    if trains:
+        out = []
+        if intro:
+            out.append(render_spot(name, intro, kind))
+        out += trains
+        return name, out
     return name, [render_spot(name, lines, kind)]
 
 
